@@ -2,7 +2,7 @@
 
 The MKV Sub Extractor is a code that extracts subtitles from all MKV files in a specified folder to another folder. It supports three different subtitle formats: SRT, ASS, and MicroDVD. The code automatically creates the output folder if it doesn't exist and uses the `mkvextract` command-line tool to extract the subtitles. It can handle any number of MKV files, and the user is prompted to enter the input and output folder paths as well as the desired subtitle format. The code can be executed using PowerShell, Bash, or Python, depending on the user's preference.
 
-## Features
+# Features
 
 - Supports SRT, ASS, and MicroDVD subtitle formats
 - Automatically creates the destination folder if it doesn't exist
