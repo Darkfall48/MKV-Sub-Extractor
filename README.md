@@ -33,8 +33,8 @@ _Note: The mkvtoolnix package is required for this code to work, and can be inst
 python .\mkv_sub_extractor.py
 ```
 
-4. When prompted, enter the path to the input folder containing the MKV files.
-5. When prompted, enter the path to the output folder where the subtitles will be saved.
-6. When prompted, enter the desired subtitle format by entering the corresponding number (1 for SRT, 2 for ASS, 3 for MicroDVD).
+4. Enter the path to the input folder containing the MKV files.
+5. Enter the path to the output folder where the subtitles will be saved.
+6. Enter the desired subtitle format by entering the corresponding number (1 for SRT, 2 for ASS, 3 for MicroDVD).
 
 _The extracted subtitles will be saved in the output folder in the chosen format._
