@@ -1,39 +1,48 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-# Prompt the user for the input directory
-read -p "Enter the path to the input directory: " input_dir
-
-# Prompt the user for the output directory
-read -p "Enter the path to the output directory: " output_dir
+# Prompt the user for the input and output folders
+read -r -p "Enter the source folder path " input_dir
+read -r -p "Enter the destination folder path " output_dir
 
 # Create the output directory if it doesn't exist
-if [ ! -d "$output_dir" ]; then
-  mkdir -p "$output_dir"
-fi
+mkdir -p "$output_dir"
 
-# Prompt the user for the subtitle format
-read -p "Choose the subtitle format:
-1. SRT
-2. ASS
-3. MicroDVD
-" subtitle_format
-
-# Handle the different subtitle format options
-case $subtitle_format in
-  1) output_format=".srt" ;;
-  2) output_format=".ass" ;;
-  3) output_format=".sub" ;;
-  *) echo "Invalid option selected." && exit 1 ;;
-esac
+# jq is required to parse mkvmerge JSON; MKVToolNix must be on PATH
+command -v jq >/dev/null 2>&1 && command -v mkvmerge >/dev/null 2>&1 && command -v mkvextract >/dev/null 2>&1 || {
+  echo "Install jq and MKVToolNix (mkvmerge, mkvextract), or use the Python/PowerShell script." >&2
+  exit 1
+}
 
 # Get all MKV files in the input folder
-mkv_files=$(find "$input_dir" -type f -name "*.mkv")
+shopt -s nullglob
+for file in "$input_dir"/*.mkv; do
+  [[ -f "$file" ]] || continue
+  base=$(basename "$file" .mkv)
+  json=$(mkvmerge -J "$file" 2>/dev/null) || continue
+  [[ -n "$json" ]] || continue
 
-# Loop through all MKV files and extract subtitles
-for file in $mkv_files; do
-  # Construct the output file name
-  output_file="$output_dir/$(basename "$file" .mkv)$output_format"
-  
-  # Extract the subtitles
-  mkvextract tracks "$file" 0:"$output_file"
+  # Loop through subtitle tracks only (native format per track)
+  while IFS= read -r track_json; do
+    [[ -z "$track_json" ]] && continue
+    tid=$(jq -r '.id' <<<"$track_json")
+    c=$(jq -r '.codec // ""' <<<"$track_json")
+    # File extension from codec (.srt, .ass, .sup, …); empty = let mkvextract choose
+    ext=""
+    case "$c" in
+      *SubRip*|*UTF-8*|*UTF8*|*S_TEXT/UTF8*) ext=".srt" ;;
+      *SubStationAlpha*|*ASS*|*SSA*) ext=".ass" ;;
+      *PGS*|*HDMV*) ext=".sup" ;;
+      *VobSub*) ext=".sub" ;;
+      *WebVTT*) ext=".vtt" ;;
+    esac
+    out_base="${output_dir}/${base}.track${tid}${ext}"
+    # Windows: use TID+path when the path has ":" (drive or UNC), not TID:path
+    if [[ "$out_base" =~ ^[A-Za-z]: ]] || [[ "$out_base" =~ ^\\\\ ]]; then
+      spec="${tid}+${out_base}"
+    else
+      spec="${tid}:${out_base}"
+    fi
+    # Extract the subtitles
+    mkvextract tracks "$file" "$spec"
+  done < <(echo "$json" | jq -c '(.tracks // [])[] | select(.type == "subtitles")')
 done
